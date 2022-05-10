@@ -1,9 +1,9 @@
 package com.image.service;
 
-
 import net.sourceforge.tess4j.ITesseract;
 import net.sourceforge.tess4j.Tesseract;
 import net.sourceforge.tess4j.TesseractException;
+import org.apache.commons.io.FileUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
@@ -16,9 +16,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
 import java.util.regex.Matcher;
 
 @Service
@@ -40,11 +38,14 @@ public class TextExtractionServiceImpl implements TextExtractionService {
             Files.copy(file.getInputStream(), Paths.get(FILE_DIRECTORY + File.separator + file.getOriginalFilename()), StandardCopyOption.REPLACE_EXISTING);
             File internalFile = new File(FILE_DIRECTORY + File.separator + file.getOriginalFilename());
             result = instance.doOCR(internalFile);
+            result = result.replaceAll("[^A-Za-z0-9 -@%/,.\n]", " ");
+            System.out.println(result);
+            FileUtils.write(new File("Demo.txt"), result, "UTF-8");
             extractData();
         } catch (TesseractException e) {
-            e.printStackTrace();
+            System.out.println("problem getting");
         } catch (IOException e) {
-            e.printStackTrace();
+            System.out.println("problem getting");
         }
         if (result != null) {
             return new ResponseEntity<Object>(imageData, HttpStatus.OK);
@@ -52,8 +53,8 @@ public class TextExtractionServiceImpl implements TextExtractionService {
         return new ResponseEntity<Object>("Content is empty", HttpStatus.BAD_REQUEST);
     }
 
-    private List<String> fetchGST() {
-        List<String> allGST = new ArrayList<>();
+    private Set<String> fetchGST() {
+        Set<String> allGST = new LinkedHashSet<String>();
         try {
             Matcher gstnumber = Regex.gstNumber.matcher(result);
             while (gstnumber.find()) {
@@ -62,27 +63,30 @@ public class TextExtractionServiceImpl implements TextExtractionService {
         } catch (Exception e) {
             System.out.println("problem getting ");
         }
-        return allGST == null ? Collections.emptyList() : allGST;
+        allGST.removeAll(Arrays.asList("", null));
+        return allGST == null ? Collections.emptySet() : allGST;
     }
 
-    private List<String> fetchCGST() {
-        List<String> allcgst = new ArrayList<>();
+    private Set<String> fetchCGST() {
+        Set<String> allcgst = new LinkedHashSet<String>();
+
         try {
             Matcher cgst = Regex.CGST.matcher(result);
 
             while (cgst.find()) {
                 String value = cgst.group();
-                value = value.replaceAll("[^0-9.]", "");
+                value = value.replaceAll("[^0-9.,]", "");
                 allcgst.add(value);
             }
         } catch (Exception e) {
             System.out.println("problem getting ");
         }
-        return allcgst == null ? Collections.emptyList() : allcgst;
+        allcgst.removeAll(Arrays.asList("", null));
+        return allcgst == null ? Collections.emptySet() : allcgst;
     }
 
-    private List<String> fetchSGST() {
-        List<String> allsgst = new ArrayList<>();
+    private Set<String> fetchSGST() {
+        Set<String> allsgst = new LinkedHashSet<String>();
         try {
             Matcher sgst = Regex.SGST.matcher(result);
             while (sgst.find()) {
@@ -90,15 +94,15 @@ public class TextExtractionServiceImpl implements TextExtractionService {
                 value = value.replaceAll("[^0-9.]", "");
                 allsgst.add(value);
             }
-
         } catch (Exception e) {
             System.out.println("problem getting ");
         }
-        return allsgst == null ? Collections.emptyList() : allsgst;
+        allsgst.removeAll(Arrays.asList("", null));
+        return allsgst == null ? Collections.emptySet() : allsgst;
     }
 
-    private List<String> fetchIGST() {
-        List<String> alligst = new ArrayList<>();
+    private Set<String> fetchIGST() {
+        Set<String> alligst = new LinkedHashSet<String>();
         try {
             Matcher igst = Regex.IGST.matcher(result);
 
@@ -111,65 +115,77 @@ public class TextExtractionServiceImpl implements TextExtractionService {
         } catch (Exception e) {
             System.out.println("problem getting ");
         }
-        return alligst == null ? Collections.emptyList() : alligst;
+
+        alligst.removeAll(Arrays.asList("", null));
+        return alligst == null ? Collections.emptySet() : alligst;
     }
 
-    private List<String> fetchinvoice() {
-        List<String> allInvoice = new ArrayList<>();
+    private Set<String> fetchinvoice() {
+        Set<String> allInvoice = new LinkedHashSet<String>();
         try {
             Matcher invoice = Regex.invoiceNo.matcher(result);
-
+            Matcher invoice1 = Regex.invoiceNo1.matcher(result);
+            Matcher invoice2 = Regex.invoiceNo2.matcher(result);
             while (invoice.find()) {
                 String value = invoice.group();
                 String[] splited = value.split(" ");
                 for (int i = 0; i < splited.length; ++i) {
-                    if (splited[i].chars().allMatch(Character::isDigit)) {
-                        allInvoice.add(splited[i]);
+                    if(splited[i].trim().length() > 1) {
+                        allInvoice.add(splited[i].trim());
+                        break;
                     }
                 }
             }
+            while (invoice1.find()) {
+                allInvoice.add(invoice1.group());
+            }
+            while (invoice2.find()) {
+                allInvoice.add(invoice2.group());
+            }
         } catch (Exception e) {
-            System.out.println("problem getting ");
+            e.printStackTrace();
         }
-        return allInvoice == null ? Collections.emptyList() : allInvoice;
+        allInvoice.removeAll(Arrays.asList("", null));
+        return allInvoice == null ? Collections.emptySet() : allInvoice;
     }
 
-    private List<String> fetchdate() {
-        List<String> allDate = new ArrayList<>();
+    private Set<String> fetchdate() {
+        Set<String> allDate = new LinkedHashSet<String>();
         try {
             Matcher date = Regex.date.matcher(result);
-            Matcher date1 = Regex.date1.matcher(result);
             Matcher date2 = Regex.date2.matcher(result);
             Matcher date3 = Regex.date3.matcher(result);
             Matcher date4 = Regex.date4.matcher(result);
-
+            Matcher date5 = Regex.date5.matcher(result);
+            Matcher date6 = Regex.date6.matcher(result);
             while (date.find()) {
-                String value = date.group();
-                allDate.add(value.trim());
+                allDate.add(date.group().trim());
             }
             while (date2.find()) {
-                String value = date.group();
-                allDate.add(value.trim());
-            }
-            while (date4.find()) {
-                String value = date.group();
-                allDate.add(value.trim());
+                allDate.add(date2.group().trim());
             }
             while (date3.find()) {
-                String value = date.group();
-                allDate.add(value.trim());
+                allDate.add(date3.group().trim());
             }
-            while (date1.find()) {
-                allDate.add(date.group().trim());
+            while (date4.find()) {
+                allDate.add(date4.group().trim());
+            }
+            while (date5.find()) {
+                allDate.add(date5.group().trim());
+            }
+            while (date6.find()) {
+                allDate.add(date6.group().trim());
             }
         } catch (Exception e) {
             System.out.println("problem getting ");
         }
-        return allDate == null ? Collections.emptyList() : allDate;
+        allDate.removeAll(Arrays.asList("", null));
+        return allDate == null ? Collections.emptySet() : allDate;
     }
 
-    private List<String> fetchPartyName() {
-        List<String> allPartyName = new ArrayList<>();
+    private Set<String> fetchPartyName() {
+
+        Set<String> allPartyName = new LinkedHashSet<>();
         try {
             Matcher partyName = Regex.partyName.matcher(result);
             while (partyName.find()) {
@@ -180,23 +196,45 @@ public class TextExtractionServiceImpl implements TextExtractionService {
         } catch (Exception e) {
             System.out.println("problem getting ");
         }
-        return allPartyName == null ? Collections.emptyList() : allPartyName;
+        allPartyName.removeAll(Arrays.asList("", null));
+        return allPartyName == null ? Collections.emptySet() : allPartyName;
     }
 
-    private List<String> fetchTotal() {
-        List<String> allgrandtotal = new ArrayList<>();
+    private Set<String> fetchTotal() {
+        Set<String> allgrandtotal = new LinkedHashSet<>();
         try {
             Matcher grandtotal = Regex.grandTotal.matcher(result);
             while (grandtotal.find()) {
                 String value = grandtotal.group();
-                value = value.replaceAll("[^0-9. ]", "");
-                allgrandtotal.add(value.trim());
+                System.out.println(value);
+                value = value.replaceAll("[^0-9., ]", "").trim();
+                System.out.println(value);
+                String splitedValues[] = value.split(" ");
+                for (int i = 0; i < splitedValues.length; ++i) {
+                    if (splitedValues[i].length() > 4) {
+                        allgrandtotal.add(splitedValues[i].trim());
+                    }
+                }
             }
         } catch (Exception e) {
-            System.out.println("problem getting ");
+            e.printStackTrace();
         }
+        allgrandtotal.removeAll(Arrays.asList("", null));
+        return allgrandtotal == null ? Collections.emptySet() : allgrandtotal;
+    }
+    private Set<String> fetchTDS(){
+        Set<String> alltds = new LinkedHashSet<>();
+        try {
+            Matcher tds = Regex.TDS.matcher(result);
+            while (tds.find()) {
+                alltds.add(tds.group().trim());
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        alltds.removeAll(Arrays.asList("", null));
+        return alltds == null ? Collections.emptySet() : alltds;
 
-        return allgrandtotal == null ? Collections.emptyList() : allgrandtotal;
     }
 
 
@@ -208,8 +246,8 @@ public class TextExtractionServiceImpl implements TextExtractionService {
         imageData.setPartyName(fetchPartyName());
         imageData.setInvoiceNumber(fetchinvoice());
         imageData.setInvoicedate(fetchdate());
-        List<String> totals = fetchTotal();
         imageData.setTotal(fetchTotal());
+        imageData.setTds(fetchTDS());
 
     }
 

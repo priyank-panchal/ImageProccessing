@@ -2,21 +2,25 @@ package com.image.service;
 
 import com.fasterxml.jackson.annotation.JsonIdentityInfo;
 import lombok.Data;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 import org.springframework.stereotype.Component;
 
-import java.util.List;
+import java.util.Set;
+
 @Component
 @NoArgsConstructor
-@Data
+@Getter
+@Setter
 public class ImageData {
-    public List<String> gstnumbers;
-    public List<String> sgst;
-    public List<String> cgst;
-    public List<String> igst;
-    public List<String> partyName;
-    public List<String> invoiceNumber;
-    public List<String> invoicedate ;
-    public List<String> total;
-    public List<String> TDS;
+    public Set<String> gstnumbers;
+    public Set<String> sgst;
+    public Set<String> cgst;
+    public Set<String> igst;
+    public Set<String> partyName;
+    public Set<String> invoiceNumber;
+    public Set<String> invoicedate ;
+    public Set<String> total;
+    public Set<String> tds;
 }

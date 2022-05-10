@@ -18,7 +18,6 @@ public class ImageController {
     @PostMapping("/getContent/")
     public ResponseEntity<Object> extractInformationFromImage(@RequestParam("image") MultipartFile file) throws TesseractException, IOException {
             return textExtractionService.convertToText(file);
-
     }
 }
 
