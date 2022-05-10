@@ -50,7 +50,9 @@ public class TextExtractionServiceImpl implements TextExtractionService {
         if (result != null) {
             return new ResponseEntity<Object>(imageData, HttpStatus.OK);
         }
-        return new ResponseEntity<Object>("Content is empty", HttpStatus.BAD_REQUEST);
+       Map<String,String> resp = new HashMap<>();
+        resp.put("error","Content is Empty");
+        return new ResponseEntity<Object>(resp,HttpStatus.BAD_REQUEST);
     }
 
     private Set<String> fetchGST() {
@@ -184,14 +186,17 @@ public class TextExtractionServiceImpl implements TextExtractionService {
     }
 
     private Set<String> fetchPartyName() {
-
         Set<String> allPartyName = new LinkedHashSet<>();
         try {
             Matcher partyName = Regex.partyName.matcher(result);
+            Matcher partyName1 = Regex.partyName1.matcher(result);
             while (partyName.find()) {
                 String value = partyName.group();
-                value = value.replaceAll("[^A-za-z ]", "");
-                allPartyName.add(value.trim());
+                allPartyName.add(value.replaceAll("[^A-za-z ]", "").trim());
+            }
+            while (partyName1.find()) {
+                String value = partyName1.group();
+                allPartyName.add(value.replaceAll("[^A-za-z ]", "").trim());
             }
         } catch (Exception e) {
             System.out.println("problem getting ");
